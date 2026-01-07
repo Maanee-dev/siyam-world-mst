@@ -7,8 +7,6 @@ interface HeaderProps {
   setPage: (page: PageView) => void;
 }
 
-
-
 const Header: React.FC<HeaderProps> = ({ currentPage, setPage }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -87,7 +85,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setPage }) => {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
       <div className={`fixed inset-0 z-[45] bg-bone transform transition-transform duration-500 ease-in-out ${isMobileMenuOpen ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="h-full flex flex-col items-center justify-center space-y-8 px-6">
           {navLinks.map((link) => (
