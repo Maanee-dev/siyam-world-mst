@@ -1,21 +1,36 @@
+
 import { InquiryData, InquiryLead } from '../types.ts';
 
 /**
  * CONFIGURATION
- * Note: Replace SUPABASE_URL with your actual Supabase project URL.
- * The API key provided is sb_publishable_1cfPo0FZkVbdwR4_8N_s8g_8kwrZJKw.
+ * Note: To use a remote database, create a Supabase project and update these values.
  */
 const SUPABASE_URL = 'https://your-project-id.supabase.co'; 
 const SUPABASE_KEY = 'sb_publishable_1cfPo0FZkVbdwR4_8N_s8g_8kwrZJKw';
 
-// EmailJS Configuration (Required for sending actual emails)
-const EMAILJS_SERVICE_ID = 'service_siyam';
-const EMAILJS_TEMPLATE_ADMIN = 'template_admin_notify';
-const EMAILJS_TEMPLATE_USER = 'template_user_welcome';
-const EMAILJS_PUBLIC_KEY = 'your-emailjs-public-key';
+const isPlaceholder = () => SUPABASE_URL.includes('your-project-id');
 
 export const inquiryService = {
-  // Database: Save lead to Supabase via REST API
+  // Helper: Get local backups
+  getLocalLeads: (): InquiryLead[] => {
+    try {
+      const data = localStorage.getItem('serenity_leads');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  // Helper: Save local leads
+  saveLocalLeads: (leads: InquiryLead[]) => {
+    try {
+      localStorage.setItem('serenity_leads', JSON.stringify(leads));
+    } catch (err) {
+      console.error('LocalStorage write error:', err);
+    }
+  },
+
+  // Database: Save lead
   saveInquiry: async (data: InquiryData): Promise<InquiryLead> => {
     const newLead: InquiryLead = {
       ...data,
@@ -25,147 +40,107 @@ export const inquiryService = {
       source: 'google-ads'
     };
 
-    // Helper to backup data locally if the remote database fails
-    const backupLocally = () => {
+    // 1. Always save locally first (Reliability First)
+    const localLeads = inquiryService.getLocalLeads();
+    inquiryService.saveLocalLeads([newLead, ...localLeads]);
+
+    // 2. Attempt to save to Supabase if not placeholder
+    if (!isPlaceholder()) {
       try {
-        const existing = inquiryService.getLocalBackups();
-        localStorage.setItem('backup_leads', JSON.stringify([newLead, ...existing]));
-      } catch (err) {
-        console.error('Fail-safe local storage backup failed:', err);
+        await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newLead)
+        });
+      } catch (error) {
+        console.warn('Remote sync failed, using local copy:', error);
       }
-    };
-
-    try {
-      // 1. Attempt to save to Supabase
-      // If SUPABASE_URL is invalid (e.g., placeholder), this will throw "Failed to fetch"
-      const dbResponse = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(newLead)
-      });
-
-      if (!dbResponse.ok) {
-        throw new Error(`DB Connection Issue: ${dbResponse.statusText}`);
-      }
-
-      // 2. Trigger Email Notifications (non-blocking for the user)
-      inquiryService.sendEmailNotifications(newLead).catch(err => 
-        console.warn('Notification dispatch delayed:', err)
-      );
-
-      return newLead;
-    } catch (error) {
-      // Log the error but DO NOT throw. Procedural fallback ensures conversion is captured.
-      console.warn('Inquiry Storage Warning (Network/DB Connection):', error);
-      
-      // Save locally so the lead isn't lost
-      backupLocally();
-      
-      // Return the lead anyway to trigger the Thank You page/onSuccess flow.
-      // This is crucial for Google Ads conversion optimization (avoiding bounce on error).
-      return newLead;
     }
+
+    return newLead;
   },
 
-  // Email: Dispatch via EmailJS API
-  sendEmailNotifications: async (lead: InquiryLead) => {
-    const commonParams = {
-      user_name: lead.name,
-      user_email: lead.email,
-      user_phone: lead.phone,
-      check_in: lead.checkIn,
-      check_out: lead.checkOut,
-      villa_type: lead.selectedVillaId?.replace(/-/g, ' ').toUpperCase(),
-      notes: lead.notes || 'None',
-      pax: `${lead.adults} Adults, ${lead.children} Children`
-    };
-
-    try {
-      // Send to Admin Notification
-      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service_id: EMAILJS_SERVICE_ID,
-          template_id: EMAILJS_TEMPLATE_ADMIN,
-          user_id: EMAILJS_PUBLIC_KEY,
-          template_params: { ...commonParams }
-        })
-      });
-
-      // Send to Guest Auto-Responder
-      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service_id: EMAILJS_SERVICE_ID,
-          template_id: EMAILJS_TEMPLATE_USER,
-          user_id: EMAILJS_PUBLIC_KEY,
-          template_params: { ...commonParams }
-        })
-      });
-    } catch (e) {
-      console.error('Email service currently unavailable:', e);
-    }
-  },
-
-  // CMS: Fetch all leads from live database
+  // CMS: Fetch all leads (Hybrid Remote + Local)
   getAllLeads: async (): Promise<InquiryLead[]> => {
-    try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=timestamp.desc`, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
+    let remoteLeads: InquiryLead[] = [];
+    
+    if (!isPlaceholder()) {
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=timestamp.desc`, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        if (response.ok) {
+          remoteLeads = await response.json();
         }
-      });
-      return response.ok ? await response.json() : inquiryService.getLocalBackups();
-    } catch {
-      return inquiryService.getLocalBackups();
+      } catch (err) {
+        console.warn('Could not fetch remote leads:', err);
+      }
     }
+
+    const localLeads = inquiryService.getLocalLeads();
+    
+    // Merge and Deduplicate (prefer remote status if it exists)
+    const leadMap = new Map<string, InquiryLead>();
+    localLeads.forEach(l => leadMap.set(l.id, l));
+    remoteLeads.forEach(l => leadMap.set(l.id, l));
+
+    return Array.from(leadMap.values()).sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
   },
 
-  getLocalBackups: (): InquiryLead[] => {
-    try {
-      const data = localStorage.getItem('backup_leads');
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  },
-
+  // CMS: Update Status
   updateLeadStatus: async (id: string, status: InquiryLead['status']) => {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      });
-    } catch (e) {
-      console.error('Update operation failed:', e);
+    // Update Local
+    const local = inquiryService.getLocalLeads();
+    const updatedLocal = local.map(l => l.id === id ? { ...l, status } : l);
+    inquiryService.saveLocalLeads(updatedLocal);
+
+    // Update Remote
+    if (!isPlaceholder()) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status })
+        });
+      } catch (e) {
+        console.error('Remote update failed:', e);
+      }
     }
   },
 
+  // CMS: Delete
   deleteLead: async (id: string) => {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-    } catch (e) {
-      console.error('Delete operation failed:', e);
+    // Delete Local
+    const local = inquiryService.getLocalLeads();
+    inquiryService.saveLocalLeads(local.filter(l => l.id !== id));
+
+    // Delete Remote
+    if (!isPlaceholder()) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+      } catch (e) {
+        console.error('Remote delete failed:', e);
+      }
     }
   }
 };
