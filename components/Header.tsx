@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { PageView } from '../types.ts';
 
@@ -5,6 +6,8 @@ interface HeaderProps {
   currentPage: PageView;
   setPage: (page: PageView) => void;
 }
+
+
 
 const Header: React.FC<HeaderProps> = ({ currentPage, setPage }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -37,13 +40,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setPage }) => {
       <header className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${bgClass}`}>
         <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
           <div 
-            className="cursor-pointer group text-center md:text-left z-50" 
+            className="cursor-pointer group flex flex-col items-center md:items-start z-50" 
             onClick={() => handleNavClick(PageView.HOME)}
           >
             <div className={`text-lg md:text-xl font-serif tracking-[0.2em] uppercase transition-colors ${isMobileMenuOpen ? 'text-earth' : textClass}`}>
               Siyam World
             </div>
-            <div className={`text-[8px] tracking-[0.4em] uppercase opacity-40 mt-1 transition-colors ${isMobileMenuOpen ? 'text-earth' : textClass}`}>
+            <div className={`text-[7px] tracking-[0.4em] uppercase opacity-40 mt-1 transition-colors ${isMobileMenuOpen ? 'text-earth' : textClass}`}>
               Maldives Serenity Travels
             </div>
           </div>

@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { InquiryData, VillaItem } from '../types.ts';
+import { inquiryService } from '../services/inquiryService.ts';
 
 interface InquiryFormProps {
   onSuccess: () => void;
@@ -107,6 +108,7 @@ const CustomCalendar = ({ onSelect, selectedStart, selectedEnd }: {
 
 const InquiryForm: React.FC<InquiryFormProps> = ({ onSuccess, variant = 'embedded', preSelectedVillaId, villas }) => {
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<InquiryData>({
     checkIn: '',
@@ -149,18 +151,39 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onSuccess, variant = 'embedde
     setStep(prev => prev + 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.phone) {
       alert("Please ensure all contact details are provided.");
       return;
     }
-    onSuccess();
+    
+    setIsSubmitting(true);
+    try {
+      await inquiryService.saveInquiry(formData);
+      onSuccess();
+    } catch (err) {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const containerClasses = variant === 'modal' 
     ? "bg-bone p-6 md:p-14 rounded-none shadow-3xl w-full h-full md:h-auto md:max-w-2xl md:max-h-[95vh] flex flex-col border border-earth/5" 
     : "bg-white p-10 md:p-16 rounded-none shadow-sm border border-earth/5 w-full flex flex-col";
+
+  if (isSubmitting) {
+    return (
+      <div className={`${containerClasses} items-center justify-center space-y-8 min-h-[400px]`}>
+        <div className="w-16 h-16 border-4 border-sand border-t-earth rounded-full animate-spin"></div>
+        <div className="text-center">
+          <h3 className="text-2xl font-serif text-earth mb-2 italic">Securing Your Lead</h3>
+          <p className="text-[10px] uppercase tracking-widest text-sand font-bold">Connecting to Siyam World Database...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`${containerClasses} animate-slide-up no-scrollbar`}>

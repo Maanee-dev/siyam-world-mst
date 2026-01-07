@@ -1,8 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const AIBot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,10 +27,12 @@ const AIBot: React.FC = () => {
     setIsLoading(true);
 
     try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: userMsg,
         config: {
+          thinkingConfig: { thinkingBudget: 0 },
           systemInstruction: `You are a luxury travel assistant for Maldives Serenity Travels, an official partner of Siyam World Maldives.
           Siyam World is a 24-hour premium WOW! All-Inclusive resort in Noonu Atoll. 
           Key Features: 54 hectares, 16 villa categories, overwater slides, 18 restaurants/bars, Maldives' first go-kart track, horse ranch.

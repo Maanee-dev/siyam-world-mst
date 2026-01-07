@@ -11,6 +11,13 @@ export interface InquiryData {
   selectedVillaId?: string;
 }
 
+export interface InquiryLead extends InquiryData {
+  id: string;
+  timestamp: string;
+  status: 'new' | 'contacted' | 'booked';
+  source: 'google-ads' | 'direct';
+}
+
 export enum PageView {
   HOME = 'home',
   ROOMS = 'rooms',
