@@ -5,7 +5,7 @@ import { InquiryData, InquiryLead } from '../types.ts';
  * CONFIGURATION
  * Note: To use a remote database, create a Supabase project and update these values.
  */
-const SUPABASE_URL = 'https://your-project-id.supabase.co'; 
+const SUPABASE_URL = 'https://gkhhuoorczwhblthknjm.supabase.co'; 
 const SUPABASE_KEY = 'sb_publishable_1cfPo0FZkVbdwR4_8N_s8g_8kwrZJKw';
 
 const isPlaceholder = () => SUPABASE_URL.includes('your-project-id');
