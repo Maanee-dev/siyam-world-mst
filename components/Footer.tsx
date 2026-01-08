@@ -58,6 +58,14 @@ const Footer: React.FC<FooterProps> = ({ setPage }) => {
               <span className="text-[9px] uppercase tracking-widest font-black text-sand/40">Inquiry Line</span>
               Official WhatsApp Priority Support
             </li>
+            <li className="pt-4">
+              <button 
+                onClick={() => setPage(PageView.CMS)}
+                className="text-[9px] uppercase tracking-widest font-black text-sand/40 hover:text-sand transition-colors border-t border-bone/5 pt-4 block"
+              >
+                Partner Portal
+              </button>
+            </li>
           </ul>
         </div>
       </div>
