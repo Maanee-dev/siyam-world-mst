@@ -70,4 +70,12 @@ export interface AppContent {
   highlights: HighlightItem[];
   villas: VillaItem[];
   packages: PackageItem[];
+  siteBranding: {
+    resortName: string;
+    partnerName: string;
+    heroHeadline: string;
+    heroSubheadline: string;
+    trustSignal: string;
+    primaryCTA: string;
+  };
 }

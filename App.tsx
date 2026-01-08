@@ -10,23 +10,7 @@ import { VillasPage, RoomDetailView } from './villas/VillasPage.tsx';
 import { DiningPage } from './dining/DiningPage.tsx';
 import { ThankYouPage } from './thank-you/ThankYouPage.tsx';
 import { CMSPage } from './cms/CMSPage.tsx';
-import { VILLAS } from './constants.tsx';
-
-const INITIAL_CONTENT: AppContent = {
-  heroAssets: [
-    { type: 'video', src: 'https://maldives-serenitytravels.com/assets/videos/Villa%20Haven%20-%20Cinematic%20Video%20-%203840%20x%202160.mp4' },
-    { type: 'image', src: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?q=80&w=2400&auto=format&fit=crop' },
-    { type: 'image', src: 'https://images.unsplash.com/photo-1544550581-5f7ceaf7f992?q=80&w=2400&auto=format&fit=crop' },
-    { type: 'image', src: 'https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?q=80&w=2400&auto=format&fit=crop' }
-  ],
-  highlights: [
-    { title: "Marwari Ranch", category: "Unique Experience", img: "https://www.sunsiyam.com/media/0gvjfscq/siyam-world-horse-9.jpg" },
-    { title: "Floating Park", category: "Adventure", img: "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&w=800" },
-    { title: "Siyam Speed", category: "Go-Karting", img: "https://www.sunsiyam.com/media/u0lb5jly/siyam-world-maldives-kart-2.jpg" }
-  ],
-  villas: VILLAS,
-  packages: []
-};
+import { contentService } from './services/contentService.ts';
 
 const CMS_PIN = "1234";
 
@@ -34,7 +18,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageView>(PageView.HOME);
   const [currentVilla, setCurrentVilla] = useState<VillaItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [content, setContent] = useState<AppContent>(INITIAL_CONTENT);
+  const [content, setContent] = useState<AppContent>(contentService.getContent());
   const [isCmsAuthenticated, setIsCmsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
 
@@ -55,6 +39,11 @@ const App: React.FC = () => {
       alert("Invalid Access PIN");
       setPinInput('');
     }
+  };
+
+  const handleContentUpdate = (newContent: AppContent) => {
+    setContent(newContent);
+    contentService.saveContent(newContent);
   };
 
   const renderPage = () => {
@@ -107,7 +96,7 @@ const App: React.FC = () => {
             </div>
           );
         }
-        return <CMSPage content={content} onUpdate={setContent} />;
+        return <CMSPage content={content} onUpdate={handleContentUpdate} />;
       default:
         return (
           <LandingPage 
@@ -115,6 +104,7 @@ const App: React.FC = () => {
             highlights={content.highlights} 
             onInquiry={handleInquiry} 
             setPage={setCurrentPage} 
+            branding={content.siteBranding}
           />
         );
     }
