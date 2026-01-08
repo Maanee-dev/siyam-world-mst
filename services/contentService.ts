@@ -13,8 +13,8 @@ const INITIAL_CONTENT: AppContent = {
   ],
   highlights: [
     { title: "Marwari Ranch", category: "Unique Experience", img: "https://www.sunsiyam.com/media/0gvjfscq/siyam-world-horse-9.jpg" },
-    { title: "Floating Park", category: "Adventure", img: "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&w=800" },
-    { title: "Siyam Speed", category: "Go-Karting", img: "https://www.sunsiyam.com/media/u0lb5jly/siyam-world-maldives-kart-2.jpg" }
+    { title: "Floating Park", category: "Adventure", img: "https://globetrender.com/wp-content/uploads/2021/08/Siyam-Water-World-aerial.jpg" },
+    { title: "Siyam Speed", category: "Go-Karting", img: "https://www.traveltrademaldives.com/assets/2024/05/087A0952_11zon-scaled.jpg" }
   ],
   villas: VILLAS,
   packages: [],
